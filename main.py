@@ -16,7 +16,49 @@ from tkinter import *
 from PIL import ImageTk, Image
 from tkinter import messagebox
 
+import logging
+import logging.handlers as handlers
+from datetime import datetime
 
+import subprocess as s
+
+from test import pid
+
+test_pid = pid
+
+def killProcess(pid):
+    s.Popen('taskkill /F /PID {0}'.format(pid), shell=True)
+
+
+game_over = False
+
+# Setting up Log file name
+time = str(datetime.now())
+# print(time)
+
+str_file = datetime.now().strftime('mylogfile_%Y-%m-%d_%H-%M')
+
+# print(str_file)
+
+log_filename = "./Logs/" + str_file + ".log"
+
+logger = logging.getLogger(__name__)
+
+logging.basicConfig(level=logging.INFO, filename=log_filename, filemode="w",
+                            format="%(asctime)s - %(levelname)s - %(message)s")
+
+
+
+handler = logging.FileHandler(log_filename)
+
+formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+handler.setFormatter(formatter)
+
+logger.addHandler(handler)
+
+
+
+# Creating Player Class for Adventurer
 class player:
     def __init__(self, location, health, items):
         self.location = location
@@ -25,33 +67,22 @@ class player:
 
 hero = player("entry", 100, 0)
 
-class NPC:
-    def __init__(self, name, location):
-        self.name = name
-        self.location = location
-
-    def talk(self):
-        game_functions.fprint(f"A {self.name} emerges from the shadows.")
-        game_functions.fprint("'Hisssss! Stay away from me!'")
-
-    def move(self):
-        available_locations = ["entry", "door", "lake", "alarming", "cavern", "hallway", "pit", "gold"]
-        self.location = random.choice(available_locations)
-
-
-goblin = NPC("goblin", "hallway")
 
 class GUI:
     
+    # Initialzing main window for GUI
     def __init__(self, window):
         self.window = window
 
-# window = tkinter.Tk()
+        
+
+
         window.title("Adventure Game")
 
-        window.geometry("966x745")
+        window.geometry("966x745+0+0")
         window.minsize(width=966, height=745)
         window.maxsize(width=966, height=745)
+
 
         frame = Frame(window)
         frame.pack()
@@ -67,6 +98,7 @@ class GUI:
         self.label = tkinter.Label(frame, image=self.img)
         self.label.pack()
 
+        # Setting Basic buttons and Labels
         self.l1 = tkinter.Label(frame, text="WELCOME TO OUR ADVERNTURE GAME")
         self.l1.pack()
 
@@ -91,6 +123,7 @@ class GUI:
 
         self.use_medkit = tkinter.Button(frame, width=15, height=1, text="USE MEDKIT")
 
+    # Function to make Medkit
     def medkit(self):
         medkit_find = random.choice([True, False])
         if medkit_find is True:
@@ -99,10 +132,10 @@ class GUI:
             medkit_text = "MEDKITS = " + str(hero.items)
             self.l3.configure(text=medkit_text)
             self.l3.pack()
-            # game_functions.fprint("You found a medkit!", 2)
-            # print("Enter 'm' to use it.")
 
+    # Function to allow use of Medkit
     def using_medkit(self):
+        logging.info("Using MedKit")
         if hero.items >= 1:
             hero.health = 100
             health_text = "HEALTH = " + str(hero.health)
@@ -115,6 +148,7 @@ class GUI:
 
             self.l2.configure(text=health_text)
 
+    # Function to handle Bat Attack
     def bat_attack(self):
         bat_attack = random.choice([True, False])
         if bat_attack is True:
@@ -123,35 +157,32 @@ class GUI:
             health_text = "HEALTH = " + str(hero.health)
             self.l2.configure(text=health_text)
 
-            # Killin the Game
+            # Killing the Game
             if hero.health <= 0:
+                game_over = True
+                print(game_over)
+                
+                logging.info("YOU DIED")
                 tkinter.messagebox.showinfo( "Death", "You Died!!")
                 self.window.destroy()
-                sys.exit()
+                # killProcess(test_pid)
+                os._exit(0)
+                # sys.exit()
 
     
-    def handle_goblin(self):
-        goblin.move()
-        if hero.location == goblin.location:
-            print("ATTACK")
 
-    # Creatig Button function
+    # Creating Button function
     def create_btn(self, str, cmd):
         btn = self.tkinter.Button(self.frame, width=15, height=1, text=str, command=cmd)
         return btn
 
-    # # Creating Yes and No Buttons
-    # yes_1 = create_btn("YES", "")
-    # no_1 = create_btn("NO", "")
 
-# # Healt Bar
-# l2 = tkinter.Label(frame, text="HEALTH = 100", bg="Black", fg="White")
-
-    # Clearin Frame of all widets
+    # Clearin Frame of all widgets
     def clear_frame(self):
         for widgets in self.frame.winfo_children():
             widgets.destroy()
 
+    # Function to change image
     def change_img(self,str):
         self.img2=ImageTk.PhotoImage(Image.open(str))
         self.label.configure(image=self.img2)
@@ -159,8 +190,9 @@ class GUI:
 
 
 
-
+    # Starting of Game with 1st Stage
     def Entry(self):
+        logging.info("Starting Game")
         self.change_img("Cave2.png")
         self.b1.destroy()
         
@@ -183,8 +215,9 @@ class GUI:
         self.use_medkit.pack()
 
 
-
+    # Choosing option YES
     def yes_kick(self):
+        logging.info("YES")
         print("Location", hero.location)
         self.medkit()
         self.bat_attack()
@@ -194,12 +227,15 @@ class GUI:
         self.yes_1.configure(command=self.Door)
         # yes_1.pack()
 
+    # Choosing option NO
     def no_kick(self):
+        logging.info("NO")
         self.change_img("bat.png")
         self.l1.config(text="A bat flies over your head and you hear screetches in the distance. You sit in total darkness wondering if there's a way out.")
 
-
+    # Choosing option YES
     def Door(self):
+        logging.info("YES")
         self.medkit()
         self.bat_attack()
 
@@ -209,11 +245,15 @@ class GUI:
         self.no_1.configure(command=self.no_Door)
         self.yes_1.configure(command=self.Alarming)
 
+    # Choosing option NO
     def no_Door(self):
+        logging.info("NO")
         self.l1.config(text="You are injured because crocodile hits you. You are thinking any other way except using rope.")
         self.l2.pack()
 
+    # Choosing option YES
     def Alarming(self):
+        logging.info("YES")
         self.medkit()
         self.bat_attack()
 
@@ -223,12 +263,15 @@ class GUI:
         self.no_1.configure(command=self.no_Alarming)
         self.yes_1.configure(command=self.Cavern)
 
+    # Choosing option NO
     def no_Alarming(self):
+        logging.info("NO")
         self.l1.config(text="Your one leg and arm has burned because of fire.")
         self.l2.pack()
 
-
+    # Choosing option YES
     def Cavern(self):
+        logging.info("YES")
         self.medkit()
         self.bat_attack()
 
@@ -238,11 +281,15 @@ class GUI:
         self.no_1.configure(command=self.no_Cavern)
         self.yes_1.configure(command=self.Hallway)
 
+    # Choosing option NO
     def no_Cavern(self):
+        logging.info("NO")
         self.l1.config(text="You sit down and eat some food you brought with you.")
         self.l2.pack()
 
+    # Choosing option YES
     def Hallway(self):
+        logging.info("YES")
         self.medkit()
         self.bat_attack()
 
@@ -252,11 +299,15 @@ class GUI:
         self.no_1.configure(command=self.no_Hallway)
         self.yes_1.configure(command=self.Pit)
 
+    # Choosing option NO
     def no_Hallway(self):
+        logging.info("NO")
         self.l1.config(text="You try to call your help but no one is there.")
         self.l2.pack()
 
+    # Choosing option YES
     def Pit(self):
+        logging.info("YES")
         self.medkit()
         self.bat_attack()
 
@@ -266,23 +317,30 @@ class GUI:
         self.no_1.configure(command=self.no_Pit)
         self.yes_1.configure(command=self.Gold)
 
+    # Choosing option NO
     def no_Pit(self):
+        logging.info("NO")
         self.l1.config(text="You sit in utter darkness.")
         self.l2.pack()
 
+    # Choosing option YES
     def Gold(self):
+        logging.info("YES")
         self.change_img("Gold.png")
         self.l1.config(text="You reached to your final destination.Finally, you can see gold. You can take the gold. Will you take?")
         self.l2.pack()
         self.no_1.configure(command=self.Lose)
         self.yes_1.configure(command=self.Win)
 
-
+    # Choosing option NO
     def Lose(self):
+        logging.info("LOSE")
         self.change_img("Lose.png")
         self.l1.config(text="You did not take the Gold. GAME OVER!")
 
+    # Choosing option YES
     def Win(self):
+        logging.info("WON")
         self.change_img("Win.png")
         self.l1.config(text="You took enough gold. GAME OVER!")
         self.l2.pack()
@@ -314,13 +372,6 @@ class Game:
 
 
 game_functions = Game()
-
-
-
-
-
-
-
 
 class World:
 
@@ -487,11 +538,6 @@ class World:
             game_functions.fprint("You don't have a medkit.")
 
 
-    def handle_goblin(self):
-        goblin.move()
-        if hero.location == goblin.location:
-            goblin.talk()
-
 
     def check_medkit(self):
         medkit_find = random.choice([True, False])
@@ -511,12 +557,19 @@ class World:
                 game_functions.fprint("You are dead!")
                 sys.exit()
 
+def test_run():
+    root = Tk()
+    gui = GUI(root)
+    root.mainloop()
+    pass
 
-root = Tk()
-gui = GUI(root)
-root.mainloop()
+if __name__ == '__main__':
+    # Running the main GUI object
+    root = Tk()
+    gui = GUI(root)
+    root.mainloop()
 
-# new_world = World()
+    # new_world = World()
 
 
-# new_world.entry()
+    # new_world.entry()
